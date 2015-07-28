@@ -21,13 +21,25 @@ var User = db.Model.extend({
   })
 
 }, {
-  
+
+  checkUserExists: Promise.method(function(username) {
+    // async call to check if a user exists
+
+    return new this({username: username}).fetch({require: true}).then(function() {
+      return true;
+    }).catch(function(err) {
+      return false;
+    });
+  }),
+
   login: function(username, password, callback) {
-    if (!username || !password) throw new Error('Email and password are both required');
+    if (!username || !password) {
+      return callback(false);
+    }
 
     return new this({username: username}).fetch({require: true}).tap(function(user) {
       bcrypt.compare(password, user.get('password'), function(err, res) {
-        callback(res);
+        return callback(res);
       });
     });
   }

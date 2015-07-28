@@ -22,37 +22,36 @@ app.use(bodyParser.json());
 // Parse forms (signup/login)
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
-// Use express `session` and `cookieParser`
+// Use express `session`
 app.use(session({
   secret: 'keyboard cat'
 }));
-app.use(cookieParser());
 
 
 app.get('/', function(req, res) {
-  // console.log('here');
-  // console.log(req.session);
-  // console.log(req.sessionID);
-
-  // If a user is already logged in...
-  res.render('index');
-
-  // else, redirect to the login route
-  // res.redirect(301, '/login');
+  if (req.session.secret) {
+    res.render('index');
+  } else {
+    res.redirect(301, '/login');
+  }
 });
 
 app.get('/create', function(req, res) {
-  // res.render('index');
-
-  res.redirect(301, '/login');
+  if (req.session.secret) {
+    res.render('index');
+  } else {
+    res.redirect(301, '/login');
+  }
 });
 
 app.get('/links', function(req, res) {
-  // Links.reset().fetch().then(function(links) {
-  //   res.send(200, links.models);
-  // });
-
-  res.redirect(301, '/login');
+  if (req.session.secret) {
+    Links.reset().fetch().then(function(links) {
+      res.send(200, links.models);
+    });
+  } else {
+    res.redirect(301, '/login');
+  }
 });
 
 app.post('/links', function(req, res) {
@@ -92,7 +91,11 @@ app.post('/links', function(req, res) {
 // Login/logout routes
 /************************************************************/
 app.get('/login', function(req, res) {
-  res.render('login');
+  if (req.session.secret) {
+    res.redirect(301, '/');
+  } else {
+    res.render('login');
+  }
 });
 
 app.post('/login', function(req, res) {
@@ -100,18 +103,24 @@ app.post('/login', function(req, res) {
   User.login(req.body.username, req.body.password, function(valid) {
     if (!valid) {
       console.log('invalid');
+      res.redirect(301, '/login');
     } else {
-      console.log('valid');
-    }
+      req.session.secret = req.body.username;
 
-    res.end();
+      req.session.save(function(err) {
+        // session saved
+        res.redirect(301, '/');
+      })
+    }
   });
 
 
 });
 
 app.get('/logout', function(req, res) {
-  res.end('logging out');
+  req.session.destroy(function(err) {
+    res.redirect(301, '/login');
+  });
 });
 
 
@@ -119,7 +128,11 @@ app.get('/logout', function(req, res) {
 // Sign Up Routes
 /************************************************************/
 app.get('/signup', function(req, res) {
-  res.render('signup');
+  if (req.session.secret) {
+    res.redirect(301, '/');
+  } else {
+    res.render('signup');
+  }
 });
 
 app.post('/signup', function(req, res) {
@@ -134,11 +147,18 @@ app.post('/signup', function(req, res) {
     } else {
       user.hashPassword(req.body.password).then(function() {
         user.save().then(function(user) {
-          User.login(req.body.username, req.body.password).then(function(val) {
-            // new user signed up and logged in, redirecting home
-            res.redirect(301, '/');
-          }).catch(function(err) {
-            res.end(err);
+          User.login(req.body.username, req.body.password, function(valid) {
+            if (!valid) {
+              console.log('invalid');
+              res.send('invalid');
+            } else {
+              req.session.secret = req.body.username;
+
+              req.session.save(function(err) {
+                // session saved
+                res.redirect(301, '/');
+              })
+            }
           });
         });
       });
