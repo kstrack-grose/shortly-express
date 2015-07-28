@@ -17,21 +17,36 @@ var app = express();
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
 app.use(partials());
+
 // Parse JSON (uniform resource locators)
 app.use(bodyParser.json());
+
 // Parse forms (signup/login)
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
+
 // Use express `session`
 app.use(session({
   secret: 'keyboard cat'
 }));
 
+// Define a user
+var currentUserId;
+
 
 app.get('/', function(req, res) {
   if (req.session.secret) {
-    res.render('index');
+    if (!currentUserId) {
+      currentUserId = new User({username: req.session.secret}).fetch().then(function(model) {
+        res.render('index');
+        currentUserId = model.get('id');
+      });
+    } else {
+      res.render('index');
+      console.log(currentUserId);
+    }
   } else {
+    currentUserId = null
     res.redirect(301, '/login');
   }
 });
@@ -46,7 +61,7 @@ app.get('/create', function(req, res) {
 
 app.get('/links', function(req, res) {
   if (req.session.secret) {
-    Links.reset().fetch().then(function(links) {
+    Links.reset().query('where', 'user_id', '=', currentUserId).fetch().then(function(links) {
       res.send(200, links.models);
     });
   } else {
@@ -73,6 +88,7 @@ app.post('/links', function(req, res) {
         }
 
         var link = new Link({
+          user_id: currentUserId,
           url: uri,
           title: title,
           base_url: req.headers.origin
