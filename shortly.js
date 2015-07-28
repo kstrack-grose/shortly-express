@@ -30,14 +30,15 @@ app.use(cookieParser());
 
 
 app.get('/', function(req, res) {
-  // 
+  // console.log('here');
+  // console.log(req.session);
   // console.log(req.sessionID);
 
   // If a user is already logged in...
-  // res.render('index');
+  res.render('index');
 
   // else, redirect to the login route
-  res.redirect(301, '/login');
+  // res.redirect(301, '/login');
 });
 
 app.get('/create', function(req, res) {
@@ -95,15 +96,18 @@ app.get('/login', function(req, res) {
 });
 
 app.post('/login', function(req, res) {
-  // call User.login with posted credentials
-  User.login(req.body.username, req.body.password, function(credsMatch) {
-    if (credsMatch) {
-      // create the session
-      res.redirect(301, '/');
+  
+  User.login(req.body.username, req.body.password, function(valid) {
+    if (!valid) {
+      console.log('invalid');
     } else {
-      res.render('login');
+      console.log('valid');
     }
+
+    res.end();
   });
+
+
 });
 
 app.get('/logout', function(req, res) {

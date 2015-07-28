@@ -8,20 +8,6 @@ var User = db.Model.extend({
 
   hasTimestamps: true,
 
-  initialize: function() {
-    this.on('creating', this.validateSave);
-  },
-
-  validateSave: function() {
-    // var hash = bcrypt.hashSync(this.attributes.password, null);
-    
-    // this.set({
-    //   password: hash
-    // });
-
-    return;
-  },
-
   hashPassword: Promise.method(function(password) {
     return bcrypt.hash(password, null, null, function(err, password) {
       if (err) throw err;
@@ -35,24 +21,16 @@ var User = db.Model.extend({
   })
 
 }, {
+  
+  login: function(username, password, callback) {
+    if (!username || !password) throw new Error('Email and password are both required');
 
-  checkUserExists: Promise.method(function(username) {
-    return new this({username: username}).fetch({require: true}).then(function() {
-      return true;
-    }).catch(function(err) {
-      return false;
-    });
-  }),
-
-  login: Promise.method(function(username, password, cb) {
-    return new this({username: username}).fetch({require: true}).then(function(user) {
-      return bcrypt.compare(password, user.get('password'), function(err, credsMatch) {
-        return cb(credsMatch);
+    return new this({username: username}).fetch({require: true}).tap(function(user) {
+      bcrypt.compare(password, user.get('password'), function(err, res) {
+        callback(res);
       });
-    }).catch(function(err) {
-      console.log(err);
     });
-  })
+  }
 
 });
 
