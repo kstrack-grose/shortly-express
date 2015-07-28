@@ -88,10 +88,26 @@ app.post('/links', function(req, res) {
 });
 
 /************************************************************/
-// Log In routes
+// Login/logout routes
 /************************************************************/
 app.get('/login', function(req, res) {
   res.render('login');
+});
+
+app.post('/login', function(req, res) {
+  // call User.login with posted credentials
+  User.login(req.body.username, req.body.password, function(credsMatch) {
+    if (credsMatch) {
+      // create the session
+      res.redirect(301, '/');
+    } else {
+      res.render('login');
+    }
+  });
+});
+
+app.get('/logout', function(req, res) {
+  res.end('logging out');
 });
 
 

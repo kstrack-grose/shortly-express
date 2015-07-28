@@ -44,13 +44,10 @@ var User = db.Model.extend({
     });
   }),
 
-  login: Promise.method(function(username, password) {
+  login: Promise.method(function(username, password, cb) {
     return new this({username: username}).fetch({require: true}).then(function(user) {
-
-      console.log(user.get('password'), password);
-
-      return bcrypt.compare(password, user.get('password'), function(err, isSame) {
-        console.log('-----------------', isSame);
+      return bcrypt.compare(password, user.get('password'), function(err, credsMatch) {
+        return cb(credsMatch);
       });
     }).catch(function(err) {
       console.log(err);
