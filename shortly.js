@@ -2,7 +2,8 @@ var express = require('express');
 var util = require('./lib/utility');
 var partials = require('express-partials');
 var bodyParser = require('body-parser');
-
+var session = require('express-session');
+var cookieParser = require('cookie-parser');
 
 var db = require('./app/config');
 var Users = require('./app/collections/users');
@@ -21,27 +22,39 @@ app.use(bodyParser.json());
 // Parse forms (signup/login)
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
+// Use express `session` and `cookieParser`
+app.use(session({
+  secret: 'keyboard cat'
+}));
+app.use(cookieParser());
 
 
-app.get('/', 
-function(req, res) {
-  res.render('index');
+app.get('/', function(req, res) {
+  // 
+  // console.log(req.sessionID);
+
+  // If a user is already logged in...
+  // res.render('index');
+
+  // else, redirect to the login route
+  res.redirect(301, '/login');
 });
 
-app.get('/create', 
-function(req, res) {
-  res.render('index');
+app.get('/create', function(req, res) {
+  // res.render('index');
+
+  res.redirect(301, '/login');
 });
 
-app.get('/links', 
-function(req, res) {
-  Links.reset().fetch().then(function(links) {
-    res.send(200, links.models);
-  });
+app.get('/links', function(req, res) {
+  // Links.reset().fetch().then(function(links) {
+  //   res.send(200, links.models);
+  // });
+
+  res.redirect(301, '/login');
 });
 
-app.post('/links', 
-function(req, res) {
+app.post('/links', function(req, res) {
   var uri = req.body.url;
 
   if (!util.isValidUrl(uri)) {
@@ -75,9 +88,48 @@ function(req, res) {
 });
 
 /************************************************************/
-// Write your authentication routes here
+// Log In routes
 /************************************************************/
+app.get('/login', function(req, res) {
+  res.render('login');
+});
 
+
+/************************************************************/
+// Sign Up Routes
+/************************************************************/
+app.get('/signup', function(req, res) {
+  res.render('signup');
+});
+
+app.post('/signup', function(req, res) {
+  var user = new User({
+    username: req.body.username,
+    password: req.body.password
+  });
+
+  User.checkUserExists(req.body.username).then(function(exists) {
+    if (exists) {
+      res.end('user already exists');
+    } else {
+      user.hashPassword(req.body.password).then(function() {
+        user.save().then(function(user) {
+          User.login(req.body.username, req.body.password).then(function(val) {
+            // new user signed up and logged in, redirecting home
+            res.redirect(301, '/');
+          }).catch(function(err) {
+            res.end(err);
+          });
+        });
+      });
+    }
+  }).catch(function(err) {
+    console.log(err);
+    res.end(); // 500 error?
+  });
+
+
+});
 
 
 /************************************************************/
